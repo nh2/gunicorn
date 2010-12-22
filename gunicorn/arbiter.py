@@ -365,7 +365,7 @@ class Arbiter(object):
         util._setproctitle("master [%s]" % self.proc_name)
         
         # manage workers
-        self.manage_workers 
+        self.manage_workers() 
         
     @property
     def active_workers(self):
