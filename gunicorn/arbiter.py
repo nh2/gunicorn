@@ -347,7 +347,6 @@ class Arbiter(object):
             self.LISTENER = create_socket(self.cfg)
             self.log.info("Listening at: %s" % self.LISTENER)    
 
-        old_workers = self.WORKERS.copy()
         # spawn new workers with new app & conf
         for i in range(self.app.cfg.workers):
             self.spawn_worker()
@@ -384,7 +383,7 @@ class Arbiter(object):
         """\
         Kill unused/idle workers
         """
-        for (pid, worker) in list(self.active_workers.items()):
+        for (pid, worker) in list(self.WORKERS.items()):
             try:
                 diff = time.time() - os.fstat(worker.tmp.fileno()).st_ctime
                 if diff <= self.timeout:
