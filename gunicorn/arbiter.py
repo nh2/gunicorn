@@ -367,12 +367,24 @@ class Arbiter(object):
         # manage workers
         self.manage_workers 
         
+    @property
+    def active_workers(self):
+        """ active workers are those who have notified """
+        active_workers = {}
+        for (pid, worker) in list(self.WORKERS.items()):
+            try:
+                stat =  os.fstat(worker.tmp.fileno())
+                if stat.st_mtime <= stat.st_ctime:
+                    active_workers[pid] = worker 
+            except ValueError:
+                continue
+        return active_workers
 
     def murder_workers(self):
         """\
         Kill unused/idle workers
         """
-        for (pid, worker) in list(self.WORKERS.items()):
+        for (pid, worker) in list(self.active_workers.items()):
             try:
                 diff = time.time() - os.fstat(worker.tmp.fileno()).st_ctime
                 if diff <= self.timeout:
@@ -417,10 +429,10 @@ class Arbiter(object):
         if len(self.WORKERS.keys()) < self.num_workers:
             self.spawn_workers()
 
-        num_to_kill = len(self.WORKERS) - self.num_workers
+        num_to_kill = len(self.active_workers) - self.num_workers
         for i in range(num_to_kill, 0, -1):
             pid, age = 0, sys.maxint
-            for (wpid, worker) in self.WORKERS.iteritems():
+            for (wpid, worker) in self.active_workers.items():
                 if worker.age < age:
                     pid, age = wpid, worker.age
             self.kill_worker(pid, signal.SIGQUIT)
