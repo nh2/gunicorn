@@ -124,36 +124,34 @@ class Request(Message):
         buf = StringIO()
 
         self.get_data(unreader, buf, stop=True)
-        
+
         # Request line
-        idx = buf.getvalue().find("\r\n")
+        data = buf.getvalue()
+        idx = data.find("\r\n")
         while idx < 0:
             self.get_data(unreader, buf)
-            idx = buf.getvalue().find("\r\n")
-        self.parse_request_line(buf.getvalue()[:idx])
-        rest = buf.getvalue()[idx+2:] # Skip \r\n
+            data = buf.getvalue()
+            idx = data.find("\r\n")
+        self.parse_request_line(data[:idx])
+        data = rest = data[idx+2:] # Skip \r\n
         buf = StringIO()
         buf.write(rest)
-       
-        
-        # Headers
-        idx = buf.getvalue().find("\r\n\r\n")
 
-        done = buf.getvalue()[:2] == "\r\n"
+        # Headers
+        idx = rest.find("\r\n\r\n")
+        done = rest[:2] == "\r\n"
         while idx < 0 and not done:
             self.get_data(unreader, buf)
-            idx = buf.getvalue().find("\r\n\r\n")
-            done = buf.getvalue()[:2] == "\r\n"
+            data = buf.getvalue()
+            idx = data.find("\r\n\r\n")
+            done = data[:2] == "\r\n"
              
         if done:
-            self.unreader.unread(buf.getvalue()[2:])
+            self.unreader.unread(data[2:])
             return ""
 
-        self.headers = self.parse_headers(buf.getvalue()[:idx])
-
-        ret = buf.getvalue()[idx+4:]
-        buf = StringIO()
-        return ret
+        self.headers = self.parse_headers(data[:idx])
+        return data[idx+4:]
     
     def parse_request_line(self, line):
         bits = line.split(None, 2)
