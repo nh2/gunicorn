@@ -44,18 +44,19 @@ class ChunkedReader(object):
     def parse_trailers(self, unreader, data):
         buf = StringIO()
         buf.write(data)
-        
-        idx = buf.getvalue().find("\r\n\r\n")
-        done = buf.getvalue()[:2] == "\r\n"
+       
+        idx = data.find("\r\n\r\n")
+        done = data[:2] == "\r\n"
         while idx < 0 and not done:
             self.get_data(unreader, buf)
-            idx = buf.getvalue().find("\r\n\r\n")
-            done = buf.getvalue()[:2] == "\r\n"
+            data = buf.getvalue()
+            idx = data.find("\r\n\r\n")
+            done = data[:2] == "\r\n"
         if done:
-            unreader.unread(buf.getvalue()[2:])
+            unreader.unread(data[2:])
             return ""
-        self.req.trailers = self.req.parse_headers(buf.getvalue()[:idx])
-        unreader.unread(buf.getvalue()[idx+4:])
+        self.req.trailers = self.req.parse_headers(data[:idx])
+        unreader.unread(data[idx+4:])
 
     def parse_chunked(self, unreader):
         (size, rest) = self.parse_chunk_size(unreader)
@@ -74,20 +75,18 @@ class ChunkedReader(object):
             if rest[:2] != '\r\n':
                 raise ChunkMissingTerminator(rest[:2])
             (size, rest) = self.parse_chunk_size(unreader, data=rest[2:])          
-
     def parse_chunk_size(self, unreader, data=None):
+        data = data or "" 
         buf = StringIO()
-        if data is not None:
-            buf.write(data)
+        buf.write(data)
 
-        idx = buf.getvalue().find("\r\n")
+        idx = data.find("\r\n")
         while idx < 0:
             self.get_data(unreader, buf)
-            idx = buf.getvalue().find("\r\n")
+            data = buf.getvalue()
+            idx = data.find("\r\n")
 
-        data = buf.getvalue()
         line, rest_chunk = data[:idx], data[idx+2:]
-    
         chunk_size = line.split(";", 1)[0].strip()
         try:
             chunk_size = int(chunk_size, 16)
